@@ -42,7 +42,33 @@ export class NetClient {
             this.ws = null;
         };
         this.ws.onerror = () => { /* ignore */ };
-        // (keep onmessage as-is)
+        this.ws.onmessage = (ev) => {
+            let msg: unknown;
+            try {
+                msg = JSON.parse(typeof ev.data === 'string' ? ev.data : String(ev.data));
+            } catch {
+                return;
+            }
+
+            const parsed = ServerToClient.safeParse(msg);
+            if (!parsed.success) return;
+
+            const data = parsed.data;
+            switch (data.kind) {
+                case 'welcome':
+                    this.handlers.onWelcome(data);
+                    break;
+                case 'players':
+                    this.handlers.onPlayersSnapshot(data);
+                    break;
+                case 'playerUpdate':
+                    this.handlers.onPlayerUpdate(data);
+                    break;
+                case 'playerLeave':
+                    this.handlers.onPlayerLeave(data);
+                    break;
+            }
+        };
     }
 
     close() {
